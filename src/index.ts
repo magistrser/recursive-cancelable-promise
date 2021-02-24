@@ -7,24 +7,37 @@ import RecursiveCancelablePromiseController, {
 } from './RecursiveCancelablePromiseController';
 import RecursiveCancelablePromiseStopError from './RecursiveCancelablePromiseStopError';
 
-type RecursiveCancelablePromiseExecutorStop = () => Promise<void>;
-type RecursiveCancelablePromiseExecutorTry<T = void> = (controller: RecursiveCancelablePromiseController) => Promise<T>;
-type RecursiveCancelablePromiseExecutorCatch<T = void> = (
+export type RecursiveCancelablePromiseErrorCallback = (error: any) => Promise<void>;
+export type RecursiveCancelablePromiseExecutorStop = () => Promise<void> | void;
+
+export type RecursiveCancelablePromiseExecutorTry<T = void> = (
+    controller: RecursiveCancelablePromiseController,
+) => Promise<T>;
+
+export type RecursiveCancelablePromiseExecutorCatch<T = void> = (
     controller: RecursiveCancelablePromiseController,
     error: any,
 ) => Promise<T>;
 
-export default class RecursiveCancelablePromise<T = void> extends Promise<RecursiveCancelablePromiseResult<T>> {
+export interface Cancelable {
+    cancel: RecursiveCancelablePromiseExecutorStop;
+}
+
+export default class RecursiveCancelablePromise<T = void>
+    extends Promise<RecursiveCancelablePromiseResult<T>>
+    implements Cancelable {
     private readonly controller: _RecursiveCancelablePromiseController;
     private readonly executorStop?: RecursiveCancelablePromiseExecutorStop;
+    private readonly errorCallback?: RecursiveCancelablePromiseErrorCallback;
 
     // @ts-ignore, super must be first
     constructor(
         executorTry: RecursiveCancelablePromiseExecutorTry<T>,
         executorCatch?: RecursiveCancelablePromiseExecutorCatch<T>,
         executorStop?: RecursiveCancelablePromiseExecutorStop,
+        errorCallback?: RecursiveCancelablePromiseErrorCallback,
     ) {
-        const controller = new _RecursiveCancelablePromiseController();
+        const controller = new _RecursiveCancelablePromiseController(errorCallback);
         super(async (resolve, reject) => {
             try {
                 resolve(createResultCompleted<T>(await executorTry(controller)));
@@ -49,16 +62,17 @@ export default class RecursiveCancelablePromise<T = void> extends Promise<Recurs
 
         this.controller = controller;
         this.executorStop = executorStop;
+        this.errorCallback = errorCallback;
     }
 
-    cancel = async (onError?: (error: any) => void): Promise<void> => {
+    cancel = async (): Promise<void> => {
         this.controller.stopSignal();
         this.executorStop && (await this.executorStop());
 
         try {
             await this;
         } catch (error) {
-            onError && onError(error);
+            this.errorCallback && (await this.errorCallback(error));
         }
     };
 
