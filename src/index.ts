@@ -84,3 +84,7 @@ export default class RecursiveCancelablePromise<T = void>
         return 'RecursiveCancelablePromise';
     }
 }
+
+export * from './RecursiveCancelablePromiseStopError';
+export * from './RecursiveCancelablePromiseResult';
+export * from './RecursiveCancelablePromiseController';
