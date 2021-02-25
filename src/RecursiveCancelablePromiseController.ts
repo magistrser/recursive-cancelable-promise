@@ -1,5 +1,5 @@
 import { RCPCancelError } from './RecursiveCancelablePromiseCancelError';
-import { CancelablePromise, RCPErrorCallback } from './index';
+import RecursiveCancelablePromise, { CancelablePromise, RCPErrorCallback } from './index';
 
 export interface RCPController {
     isCanceled: () => boolean;
