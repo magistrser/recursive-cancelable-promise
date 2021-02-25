@@ -7,9 +7,9 @@
   "author": "Sergey Frantsishkov <mgistrser@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "test": "jest --config jestconfig.json",
+    "test": "yarn link && yarn link \"recursive-cancelable-promise\" && jest --config jestconfig.json",
     "build": "tsc",
-    "format": "prettier --write \"src/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "lint": "tslint -p tsconfig.json"
   },
   "devDependencies": {

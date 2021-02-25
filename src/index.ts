@@ -1,48 +1,38 @@
-import RecursiveCancelablePromiseResult, {
-    createResultCompleted,
-    createResultStopped,
-} from './RecursiveCancelablePromiseResult';
-import RecursiveCancelablePromiseController, {
-    _RecursiveCancelablePromiseController,
-} from './RecursiveCancelablePromiseController';
-import RecursiveCancelablePromiseStopError from './RecursiveCancelablePromiseStopError';
+import { RCPResult, createResultCompleted, createResultStopped } from './RecursiveCancelablePromiseResult';
+import { RCPController, _RCPController } from './RecursiveCancelablePromiseController';
+import { RCPCancelError } from './RecursiveCancelablePromiseCancelError';
 
-export type RecursiveCancelablePromiseErrorCallback = (error: any) => Promise<void>;
-export type RecursiveCancelablePromiseExecutorStop = () => Promise<void> | void;
+export type RCPErrorCallback = (error: any) => Promise<void>;
+export type RCPExecutorCancel = () => Promise<void> | void;
 
-export type RecursiveCancelablePromiseExecutorTry<T = void> = (
-    controller: RecursiveCancelablePromiseController,
-) => Promise<T>;
+export type RCPExecutorTry<T = void> = (controller: RCPController) => Promise<T>;
+export type RCPExecutorCatch<T = void> = (controller: RCPController, error: any) => Promise<T>;
 
-export type RecursiveCancelablePromiseExecutorCatch<T = void> = (
-    controller: RecursiveCancelablePromiseController,
-    error: any,
-) => Promise<T>;
-
-export interface Cancelable {
-    cancel: RecursiveCancelablePromiseExecutorStop;
+export interface CancelablePromise<T> extends Promise<RCPResult<T>> {
+    cancel: RCPExecutorCancel;
+    isCanceled(): boolean;
 }
 
 export default class RecursiveCancelablePromise<T = void>
-    extends Promise<RecursiveCancelablePromiseResult<T>>
-    implements Cancelable {
-    private readonly controller: _RecursiveCancelablePromiseController;
-    private readonly executorStop?: RecursiveCancelablePromiseExecutorStop;
-    private readonly errorCallback?: RecursiveCancelablePromiseErrorCallback;
+    extends Promise<RCPResult<T>>
+    implements CancelablePromise<T> {
+    private readonly controller: _RCPController;
+    private readonly executorCancel?: RCPExecutorCancel;
+    private readonly errorCallback?: RCPErrorCallback;
 
-    // @ts-ignore, super must be first
     constructor(
-        executorTry: RecursiveCancelablePromiseExecutorTry<T>,
-        executorCatch?: RecursiveCancelablePromiseExecutorCatch<T>,
-        executorStop?: RecursiveCancelablePromiseExecutorStop,
-        errorCallback?: RecursiveCancelablePromiseErrorCallback,
+        executorTry: RCPExecutorTry<T>,
+        executorCatch?: RCPExecutorCatch<T>,
+        executorCancel?: RCPExecutorCancel,
+        errorCallback?: RCPErrorCallback,
     ) {
-        const controller = new _RecursiveCancelablePromiseController(errorCallback);
-        super(async (resolve, reject) => {
+        const controller = new _RCPController(errorCallback);
+        super(async function (resolve, reject) {
             try {
-                resolve(createResultCompleted<T>(await executorTry(controller)));
+                const result = await executorTry(controller);
+                resolve(controller.isCanceled() ? createResultStopped<T>() : createResultCompleted<T>(result));
             } catch (errorExecutorTry) {
-                if (errorExecutorTry instanceof RecursiveCancelablePromiseStopError) {
+                if (errorExecutorTry instanceof RCPCancelError || controller.isCanceled()) {
                     resolve(createResultStopped<T>());
                     return;
                 }
@@ -53,28 +43,38 @@ export default class RecursiveCancelablePromise<T = void>
                 }
 
                 try {
-                    resolve(createResultCompleted<T>(await executorCatch(controller, errorExecutorTry)));
+                    const result = await executorCatch(controller, errorExecutorTry);
+                    resolve(controller.isCanceled() ? createResultStopped<T>() : createResultCompleted<T>(result));
                 } catch (errorExecutorCatch) {
+                    if (errorExecutorCatch instanceof RCPCancelError || controller.isCanceled()) {
+                        resolve(createResultStopped<T>());
+                        return;
+                    }
+
                     reject(errorExecutorCatch);
                 }
             }
         });
 
         this.controller = controller;
-        this.executorStop = executorStop;
+        this.executorCancel = executorCancel;
         this.errorCallback = errorCallback;
     }
 
-    cancel = async (): Promise<void> => {
-        this.controller.stopSignal();
-        this.executorStop && (await this.executorStop());
+    async cancel(): Promise<void> {
+        this.controller.cancelSignal();
+        this.executorCancel && (await this.executorCancel());
 
         try {
             await this;
         } catch (error) {
             this.errorCallback && (await this.errorCallback(error));
         }
-    };
+    }
+
+    isCanceled(): boolean {
+        return this.controller.isCanceled();
+    }
 
     static get [Symbol.species]() {
         return Promise;
@@ -85,6 +85,6 @@ export default class RecursiveCancelablePromise<T = void>
     }
 }
 
-export * from './RecursiveCancelablePromiseStopError';
-export * from './RecursiveCancelablePromiseResult';
+export * from './RecursiveCancelablePromiseCancelError';
 export * from './RecursiveCancelablePromiseController';
+export * from './RecursiveCancelablePromiseResult';

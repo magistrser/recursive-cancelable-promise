@@ -1,28 +1,28 @@
-import RecursiveCancelablePromiseStopError from './RecursiveCancelablePromiseStopError';
+import { RCPCancelError } from './RecursiveCancelablePromiseCancelError';
 
-const RecursiveCancelablePromiseResultStopped = 'RecursiveCancelablePromiseResult::STOPPED';
+const RCPResultCanceled = 'RCPResult::CANCELED';
 
-export default class RecursiveCancelablePromiseResult<T = void> {
-    private readonly result: T | typeof RecursiveCancelablePromiseResultStopped;
+export class RCPResult<T = void> {
+    private readonly result: T | typeof RCPResultCanceled;
 
-    constructor(result: T | typeof RecursiveCancelablePromiseResultStopped) {
+    constructor(result: T | typeof RCPResultCanceled) {
         this.result = result;
     }
 
-    isCanceled = (): boolean => this.result === RecursiveCancelablePromiseResultStopped;
+    isCanceled = (): boolean => this.result === RCPResultCanceled;
 
     get = (): T => {
-        if (this.result === RecursiveCancelablePromiseResultStopped) {
-            throw new RecursiveCancelablePromiseStopError();
+        if (this.result === RCPResultCanceled) {
+            throw new RCPCancelError();
         }
         return this.result;
     };
 }
 
 export function createResultCompleted<T>(result: T) {
-    return new RecursiveCancelablePromiseResult(result);
+    return new RCPResult(result);
 }
 
 export function createResultStopped<T>() {
-    return new RecursiveCancelablePromiseResult<T>(RecursiveCancelablePromiseResultStopped);
+    return new RCPResult<T>(RCPResultCanceled);
 }

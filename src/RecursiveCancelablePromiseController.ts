@@ -1,48 +1,51 @@
-import RecursiveCancelablePromiseStopError from './RecursiveCancelablePromiseStopError';
-import { Cancelable, RecursiveCancelablePromiseErrorCallback } from './index';
+import { RCPCancelError } from './RecursiveCancelablePromiseCancelError';
+import { CancelablePromise, RCPErrorCallback } from './index';
 
-export default interface RecursiveCancelablePromiseController {
-    isStopped: () => boolean;
+export interface RCPController {
+    isCanceled: () => boolean;
     sync: () => void;
-    subscribe: (promiseCreator: () => Cancelable) => void;
+    subscribe: <T>(promiseCreator: () => CancelablePromise<T>) => CancelablePromise<T>;
 }
 
-export class _RecursiveCancelablePromiseController {
-    private readonly errorCallback?: RecursiveCancelablePromiseErrorCallback;
-    private isStoppedFlag = false;
-    private subscribedCancelablePromises: Cancelable[] = [];
+export class _RCPController {
+    private readonly errorCallback?: RCPErrorCallback;
+    private isCanceledFlag = false;
+    private subscribedCancelablePromises: CancelablePromise<any>[] = [];
 
-    constructor(errorCallback?: RecursiveCancelablePromiseErrorCallback) {
+    constructor(errorCallback?: RCPErrorCallback) {
         this.errorCallback = errorCallback;
     }
 
-    stopSignal = () => {
-        this.isStoppedFlag = true;
-        this.stopSubscribedCancelablePromises();
+    cancelSignal = () => {
+        this.isCanceledFlag = true;
+        this.cancelSubscribedCancelablePromises();
     };
 
-    isStopped = (): boolean => this.isStoppedFlag;
+    isCanceled = (): boolean => this.isCanceledFlag;
 
-    sync = async (doIfStopped?: () => Promise<void>) => {
-        if (this.isStoppedFlag) {
-            doIfStopped && (await doIfStopped());
-            throw new RecursiveCancelablePromiseStopError();
+    sync = async (doIfCanceled?: () => Promise<void>) => {
+        if (this.isCanceledFlag) {
+            doIfCanceled && (await doIfCanceled());
+            throw new RCPCancelError();
         }
     };
 
-    subscribe = (promiseCreator: () => Cancelable): void => {
-        if (this.isStoppedFlag) {
-            return;
+    subscribe = <T>(promiseCreator: () => CancelablePromise<T>): CancelablePromise<T> => {
+        if (this.isCanceledFlag) {
+            throw new RCPCancelError();
         }
 
-        this.subscribedCancelablePromises.push(promiseCreator());
+        const promise = promiseCreator();
+        this.subscribedCancelablePromises.push(promise);
 
-        if (this.isStoppedFlag) {
-            this.stopSubscribedCancelablePromises();
+        if (this.isCanceledFlag) {
+            this.cancelSubscribedCancelablePromises();
         }
+
+        return promise;
     };
 
-    private stopSubscribedCancelablePromises = (): void => {
+    private cancelSubscribedCancelablePromises = (): void => {
         for (const cancelablePromise of this.subscribedCancelablePromises) {
             (async (): Promise<void> => {
                 try {
