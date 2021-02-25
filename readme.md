@@ -19,7 +19,7 @@ import RecursiveCancelablePromise, { RCPController } from 'recursive-cancelable-
 const recursiveCancelablePromise  = 
     new RecursiveCancelablePromise(
         // try handle
-        async (controller: RCPController): Promise<number> => {
+        async (controller: RCPController): Promise</*type*/> => {
             // do smth
 
             // abort execution, if canceled
@@ -43,7 +43,7 @@ const recursiveCancelablePromise  =
             rcpResult.get();
         },
         // catch handle, not required parameter
-        async (controller: RCPController, error): Promise<number> => {
+        async (controller: RCPController, error): Promise</*type*/> => {
             // error - error throwed from try handle,
             // if catch handle not specified RecursiveCancelablePromise will be rejected with error
 
