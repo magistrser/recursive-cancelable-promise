@@ -1,20 +1,24 @@
-import RecursiveCancelablePromise, { RCPController } from '../lib';
+import RecursiveCancelablePromise, { RCPController, RCPExecutorCancel } from '../lib';
 
 export function createTestPromiseTryHandleBuilder(
     expectedValue: number,
     doIn?: (controller: RCPController) => Promise<void>,
+    executorCancel?: RCPExecutorCancel,
 ): () => RecursiveCancelablePromise<number> {
     return () =>
         new RecursiveCancelablePromise(
             async (controller: RCPController): Promise<number> => {
                 return createRCPExecutor(controller, expectedValue, doIn);
             },
+            undefined,
+            executorCancel,
         );
 }
 
 export function createTestPromiseCatchHandleBuilder(
     expectedValue: number,
     doIn?: (controller: RCPController) => Promise<void>,
+    executorCancel?: RCPExecutorCancel,
 ): () => RecursiveCancelablePromise<number> {
     return () =>
         new RecursiveCancelablePromise(
@@ -27,6 +31,7 @@ export function createTestPromiseCatchHandleBuilder(
                 }
                 return createRCPExecutor(controller, expectedValue, doIn);
             },
+            executorCancel,
         );
 }
 

@@ -62,6 +62,10 @@ export default class RecursiveCancelablePromise<T = void>
     }
 
     async cancel(): Promise<void> {
+        if (this.isCanceled()) {
+            return;
+        }
+
         this.controller.cancelSignal();
         this.executorCancel && (await this.executorCancel());
 

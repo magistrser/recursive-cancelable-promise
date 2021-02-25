@@ -46,6 +46,37 @@ test('ExecutorCatch, reject', async () => {
     await expect(promise).rejects.toEqual(expectedValue);
 });
 
+test('ExecutorCancel with ExecutorTry', async () => {
+    let testObject = { stopCalled: false };
+    const promise = createTestPromiseTryHandleBuilder(
+        expectedValue,
+        undefined,
+        async (): Promise<void> => {
+            testObject.stopCalled = true;
+        },
+    )();
+
+    await promise.cancel();
+    await expect(testObject.stopCalled).toBe(true);
+});
+
+test('ExecutorCancel with ExecutorCatch', async () => {
+    let testObject = { stopCalled: false };
+    const promise = createTestPromiseCatchHandleBuilder(
+        expectedValue,
+        async (): Promise<void> => {
+            // cancel after catch handle run
+            promise.cancel();
+        },
+        async (): Promise<void> => {
+            testObject.stopCalled = true;
+        },
+    )();
+
+    await promise;
+    await expect(testObject.stopCalled).toBe(true);
+});
+
 async function testStopped(promise: RecursiveCancelablePromise) {
     await promise.cancel();
     const promiseResult = await promise;
