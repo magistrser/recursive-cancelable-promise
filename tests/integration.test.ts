@@ -56,7 +56,7 @@ test('ExecutorCancel with ExecutorTry', async () => {
         },
     )();
 
-    await promise.cancel();
+    await RecursiveCancelablePromise.cancel(promise);
     await expect(testObject.stopCalled).toBe(true);
 });
 
@@ -65,7 +65,6 @@ test('ExecutorCancel with ExecutorCatch', async () => {
     const promise = createTestPromiseCatchHandleBuilder(
         expectedValue,
         async (): Promise<void> => {
-            // cancel after catch handle run
             promise.cancel();
         },
         async (): Promise<void> => {
@@ -78,9 +77,7 @@ test('ExecutorCancel with ExecutorCatch', async () => {
 });
 
 async function testStopped(promise: RecursiveCancelablePromise) {
-    await promise.cancel();
-    const promiseResult = await promise;
-
+    const promiseResult = await RecursiveCancelablePromise.cancel(promise);
     expect(promise.isCanceled()).toBe(true);
     expect(promiseResult.isCanceled()).toBe(true);
     expect(promiseResult.get).toThrow(RCPCancelError);
@@ -106,11 +103,8 @@ test('StopSignal ExecutorTry, stop on parent promise has effect on inner', async
         expect(innerPromiseResult.get).toThrow(RCPCancelError);
     })();
 
-    await parentPromise.cancel();
-    const parentPromiseResult = await parentPromise;
-
+    const parentPromiseResult = await RecursiveCancelablePromise.cancel(parentPromise);
     expect(parentPromise.isCanceled()).toBe(true);
-
     expect(parentPromiseResult.isCanceled()).toBe(true);
     expect(parentPromiseResult.get).toThrow(RCPCancelError);
 });
@@ -125,7 +119,6 @@ test('StopSignal ExecutorCatch, stop on parent promise has effect on inner', asy
 
     const parentPromiseResult = await parentPromise;
     expect(parentPromise.isCanceled()).toBe(true);
-
     expect(parentPromiseResult.isCanceled()).toBe(true);
     expect(parentPromiseResult.get).toThrow(RCPCancelError);
 });

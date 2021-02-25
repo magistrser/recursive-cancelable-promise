@@ -47,13 +47,7 @@ export class _RCPController {
 
     private cancelSubscribedCancelablePromises = (): void => {
         for (const cancelablePromise of this.subscribedCancelablePromises) {
-            (async (): Promise<void> => {
-                try {
-                    await cancelablePromise.cancel();
-                } catch (error) {
-                    this.errorCallback && (await this.errorCallback(error));
-                }
-            })();
+            cancelablePromise.cancel();
         }
     };
 }

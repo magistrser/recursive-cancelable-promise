@@ -3,13 +3,13 @@ import { RCPController, _RCPController } from './RecursiveCancelablePromiseContr
 import { RCPCancelError } from './RecursiveCancelablePromiseCancelError';
 
 export type RCPErrorCallback = (error: any) => Promise<void>;
-export type RCPExecutorCancel = () => Promise<void> | void;
+export type RCPExecutorCancel = () => Promise<void>;
 
 export type RCPExecutorTry<T = void> = (controller: RCPController) => Promise<T>;
 export type RCPExecutorCatch<T = void> = (controller: RCPController, error: any) => Promise<T>;
 
 export interface CancelablePromise<T> extends Promise<RCPResult<T>> {
-    cancel: RCPExecutorCancel;
+    cancel: () => void;
     isCanceled(): boolean;
 }
 
@@ -61,19 +61,18 @@ export default class RecursiveCancelablePromise<T = void>
         this.errorCallback = errorCallback;
     }
 
-    async cancel(): Promise<void> {
+    cancel(): void {
         if (this.isCanceled()) {
             return;
         }
 
         this.controller.cancelSignal();
-        this.executorCancel && (await this.executorCancel());
+        this.executorCancel && this.executorCancel().catch((error) => this.errorCallback && this.errorCallback(error));
+    }
 
-        try {
-            await this;
-        } catch (error) {
-            this.errorCallback && (await this.errorCallback(error));
-        }
+    static async cancel<T>(promise: CancelablePromise<T>): Promise<RCPResult<T>> {
+        promise.cancel();
+        return promise;
     }
 
     isCanceled(): boolean {
