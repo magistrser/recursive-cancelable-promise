@@ -23,7 +23,7 @@ const recursiveCancelablePromise  =
             // do smth
 
             // abort execution, if canceled
-            await controller.sync();
+            controller.sync();
 
             // abort execution and do smth, if cancled
             controller.sync(() => {
@@ -39,10 +39,10 @@ const recursiveCancelablePromise  =
             // return RecursiveCancelablePromise
             const rcpResult = await controller.subscribe(() => new RecursiveCancelablePromise(/*...*/));
         
-            // Return resolved valuer, or abort execution
+            // Return resolved value, or abort execution
             rcpResult.get();
         },
-        // catch handle, not requred parametr
+        // catch handle, not required parameter
         async (controller: RCPController, error): Promise<number> => {
             // error - error throwed from try handle,
             // if catch handle not specified RecursiveCancelablePromise will be rejected with error
@@ -51,7 +51,7 @@ const recursiveCancelablePromise  =
 
             // controller identical to the controller from try handle
         },
-        // do if canceled, not requred parametr
+        // do if canceled, not required parameter
         async (): Promise<void> => {
             // do smth
         }
