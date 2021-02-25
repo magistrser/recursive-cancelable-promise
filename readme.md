@@ -11,7 +11,7 @@ npm install recursive-cancelable-promise
 yarn add recursive-cancelable-promise
 ```
 
-##Examples
+## Examples
 **RecursiveCancelablePromise**
 ```javascript
 import RecursiveCancelablePromise, { RCPController } from 'recursive-cancelable-promise';

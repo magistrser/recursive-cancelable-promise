@@ -1,11 +1,14 @@
 {
   "name": "recursive-cancelable-promise",
   "version": "1.0.0",
+  "description": "A CancelablePromise with the ability to stop a CancelablePromise created in a CancelablePromise",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "repository": "https://github.com/magistrser/recursive-cancelable-promise.git",
+  "keywords": ["promise", "promises", "async", "await", "cancelable", "abortable", "abort", "recursive", "controlable", "result", "safe", "task", "future", "subscription"],
   "author": "Sergey Frantsishkov <mgistrser@gmail.com>",
   "license": "MIT",
+  "files": ["lib/**/*"],
   "scripts": {
     "test": "yarn link && yarn link \"recursive-cancelable-promise\" && jest --config jestconfig.json",
     "build": "tsc",
