@@ -21,7 +21,7 @@ test('cancelable-promise.wrapper resolve', async () => {
 
 test('cancelable-promise.wrapper reject', async () => {
     const promise = wrapCancelablePromise(
-        new CancelablePromise<number>((resolve, reject, onCancel) => {
+        new CancelablePromise((resolve, reject, onCancel) => {
             reject(expectedValue);
         }),
     );
@@ -31,7 +31,7 @@ test('cancelable-promise.wrapper reject', async () => {
 
 test('cancelable-promise.wrapper stop', async () => {
     const promise = wrapCancelablePromise(
-        new CancelablePromise<number>((resolve, reject, onCancel) => {
+        new CancelablePromise((resolve, reject, onCancel) => {
             onCancel(() => {
                 resolve(expectedValue);
             });
@@ -48,7 +48,7 @@ test('cancelable-promise.wrapper integration subscribe, stop on parent promise h
     const parentPromise = createTestPromiseTryHandleBuilder(expectedValue, async (controller: RCPController) => {
         const innerPromise = controller.subscribe(() =>
             wrapCancelablePromise(
-                new CancelablePromise<number>((resolve, reject, onCancel) => {
+                new CancelablePromise((resolve, reject, onCancel) => {
                     onCancel(() => {
                         resolve(expectedValue);
                     });
@@ -72,7 +72,7 @@ test('cancelable-promise.wrapper integration subscribe, stop on inner promise ha
     const parentPromise = createTestPromiseTryHandleBuilder(expectedValue, async (controller: RCPController) => {
         const innerPromise = controller.subscribe(() =>
             wrapCancelablePromise(
-                new CancelablePromise<number>((resolve, reject, onCancel) => {
+                new CancelablePromise((resolve, reject, onCancel) => {
                     onCancel(() => {
                         resolve(expectedValue);
                     });

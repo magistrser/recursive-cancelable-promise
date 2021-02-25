@@ -1,9 +1,9 @@
 import { RCPCancelError } from './RecursiveCancelablePromiseCancelError';
-import RecursiveCancelablePromise, { CancelablePromise, RCPErrorCallback } from './index';
+import { CancelablePromise, RCPErrorCallback } from './index';
 
 export interface RCPController {
     isCanceled: () => boolean;
-    sync: () => void;
+    sync: (doIfCanceled?: () => void) => void;
     subscribe: <T>(promiseCreator: () => CancelablePromise<T>) => CancelablePromise<T>;
 }
 
@@ -23,9 +23,9 @@ export class _RCPController {
 
     isCanceled = (): boolean => this.isCanceledFlag;
 
-    sync = async (doIfCanceled?: () => Promise<void>) => {
+    sync = (doIfCanceled?: () => void): void => {
         if (this.isCanceledFlag) {
-            doIfCanceled && (await doIfCanceled());
+            doIfCanceled && doIfCanceled();
             throw new RCPCancelError();
         }
     };
