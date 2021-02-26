@@ -51,7 +51,7 @@ const recursiveCancelablePromise  =
 
             // controller identical to the controller from try handle
         },
-        // do if canceled, not required parameter
+        // do when cancel called, not required parameter
         async (): Promise<void> => {
             // do smth
         }
@@ -63,6 +63,9 @@ const recursiveCancelablePromise  =
 import RecursiveCancelablePromise from 'recursive-cancelable-promise';
 
 const recursiveCancelablePromise = new RecursiveCancelablePromise(/*...*/);
+
+// return true if canceled
+recursiveCancelablePromise.isCanceled();
 
 // Send cancel signal for controller
 recursiveCancelablePromise().cancel();
