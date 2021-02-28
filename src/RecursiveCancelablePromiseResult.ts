@@ -11,11 +11,15 @@ export class RCPResult<T = void> {
 
     isCanceled = (): boolean => this.result === RCPResultCanceled;
 
-    get = (): T => {
+    getSync = (): T => {
         if (this.result === RCPResultCanceled) {
             throw new RCPCancelError();
         }
         return this.result;
+    };
+
+    get = (): T | null => {
+        return this.result === RCPResultCanceled ? null : this.result;
     };
 }
 

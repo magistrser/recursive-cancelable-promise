@@ -40,7 +40,7 @@ const recursiveCancelablePromise  =
             const rcpResult = await controller.subscribe(() => new RecursiveCancelablePromise(/*...*/));
         
             // Return resolved value, or abort execution
-            rcpResult.get();
+            rcpResult.getSync();
         },
         // catch handle, not required parameter
         async (controller: RCPController, error): Promise</*type*/> => {
@@ -79,8 +79,13 @@ rcpResult = await RecursiveCancelablePromise.cancel(recursiveCancelablePromise);
 // return true if canceled
 rcpResult.isCanceled();
 
-// Return resolved result, or rethrow CancelableError(abort execution), helpful in inner recursiveCancelablePromise
-rcpResult.get()
+// Return resolved result, or null if recursiveCancelablePromise was canceled
+rcpResult.get();
+
+// Return resolved result, or rethrow CancelableError(abort execution),
+// if recursiveCancelablePromise was canceled.
+// Helpful in inner recursiveCancelablePromise
+rcpResult.getSync();
 ```
 
 **wrapCancelablePromise**

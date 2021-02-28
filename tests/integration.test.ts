@@ -11,6 +11,7 @@ test('ExecutorTry, resolve', async () => {
         },
     );
     expect((await promise).get()).toBe(expectedValue);
+    expect((await promise).getSync()).toBe(expectedValue);
 });
 
 test('ExecutorTry, reject', async () => {
@@ -32,6 +33,7 @@ test('ExecutorCatch, resolve', async () => {
         },
     );
     expect((await promise).get()).toBe(expectedValue);
+    expect((await promise).getSync()).toBe(expectedValue);
 });
 
 test('ExecutorCatch, reject', async () => {
@@ -76,11 +78,12 @@ test('ExecutorCancel with ExecutorCatch', async () => {
     await expect(testObject.stopCalled).toBe(true);
 });
 
-async function testStopped(promise: RecursiveCancelablePromise) {
+async function testStopped<T>(promise: RecursiveCancelablePromise<T>) {
     const promiseResult = await RecursiveCancelablePromise.cancel(promise);
     expect(promise.isCanceled()).toBe(true);
     expect(promiseResult.isCanceled()).toBe(true);
-    expect(promiseResult.get).toThrow(RCPCancelError);
+    expect(promiseResult.get()).toBeNull();
+    expect(promiseResult.getSync).toThrow(RCPCancelError);
 }
 
 test('StopSignal ExecutorTry, stopped', async () => {
@@ -100,13 +103,15 @@ test('StopSignal ExecutorTry, stop on parent promise has effect on inner', async
 
         expect(innerPromise.isCanceled()).toBe(true);
         expect(innerPromiseResult.isCanceled()).toBe(true);
-        expect(innerPromiseResult.get).toThrow(RCPCancelError);
+        expect(innerPromiseResult.get()).toBeNull();
+        expect(innerPromiseResult.getSync).toThrow(RCPCancelError);
     })();
 
     const parentPromiseResult = await RecursiveCancelablePromise.cancel(parentPromise);
     expect(parentPromise.isCanceled()).toBe(true);
     expect(parentPromiseResult.isCanceled()).toBe(true);
-    expect(parentPromiseResult.get).toThrow(RCPCancelError);
+    expect(parentPromiseResult.get()).toBeNull();
+    expect(parentPromiseResult.getSync).toThrow(RCPCancelError);
 });
 
 test('StopSignal ExecutorCatch, stop on parent promise has effect on inner', async () => {
@@ -120,7 +125,8 @@ test('StopSignal ExecutorCatch, stop on parent promise has effect on inner', asy
     const parentPromiseResult = await parentPromise;
     expect(parentPromise.isCanceled()).toBe(true);
     expect(parentPromiseResult.isCanceled()).toBe(true);
-    expect(parentPromiseResult.get).toThrow(RCPCancelError);
+    expect(parentPromiseResult.get()).toBeNull();
+    expect(parentPromiseResult.getSync).toThrow(RCPCancelError);
 });
 
 test('StopSignal ExecutorTry, stop on inner promise has no effect on parent', async () => {
@@ -131,13 +137,15 @@ test('StopSignal ExecutorTry, stop on inner promise has no effect on parent', as
         const innerPromiseResult = await innerPromise;
         expect(innerPromise.isCanceled()).toBe(true);
         expect(innerPromiseResult.isCanceled()).toBe(true);
-        expect(innerPromiseResult.get).toThrow(RCPCancelError);
+        expect(innerPromiseResult.get()).toBeNull();
+        expect(innerPromiseResult.getSync).toThrow(RCPCancelError);
     })();
 
     const parentPromiseResult = await parentPromise;
     expect(parentPromise.isCanceled()).toBe(false);
     expect(parentPromiseResult.isCanceled()).toBe(false);
     expect(parentPromiseResult.get()).toBe(expectedValue);
+    expect(parentPromiseResult.getSync()).toBe(expectedValue);
 });
 
 test('StopSignal ExecutorCatch, stop on inner promise has no effect on parent', async () => {
@@ -148,11 +156,13 @@ test('StopSignal ExecutorCatch, stop on inner promise has no effect on parent', 
         const innerPromiseResult = await innerPromise;
         expect(innerPromise.isCanceled()).toBe(true);
         expect(innerPromiseResult.isCanceled()).toBe(true);
-        expect(innerPromiseResult.get).toThrow(RCPCancelError);
+        expect(innerPromiseResult.get()).toBeNull();
+        expect(innerPromiseResult.getSync).toThrow(RCPCancelError);
     })();
 
     const parentPromiseResult = await parentPromise;
     expect(parentPromise.isCanceled()).toBe(false);
     expect(parentPromiseResult.isCanceled()).toBe(false);
     expect(parentPromiseResult.get()).toBe(expectedValue);
+    expect(parentPromiseResult.getSync()).toBe(expectedValue);
 });

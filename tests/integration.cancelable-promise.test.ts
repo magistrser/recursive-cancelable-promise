@@ -41,7 +41,8 @@ test('cancelable-promise.wrapper stop', async () => {
     const parentPromiseResult = await RecursiveCancelablePromise.cancel(promise);
     expect(promise.isCanceled()).toBe(true);
     expect(parentPromiseResult.isCanceled()).toBe(true);
-    expect(parentPromiseResult.get).toThrow(RCPCancelError);
+    expect(parentPromiseResult.get()).toBeNull();
+    expect(parentPromiseResult.getSync).toThrow(RCPCancelError);
 });
 
 test('cancelable-promise.wrapper integration subscribe, stop on parent promise has effect on inner', async () => {
@@ -59,13 +60,15 @@ test('cancelable-promise.wrapper integration subscribe, stop on parent promise h
 
         expect(innerPromise.isCanceled()).toBe(true);
         expect(innerPromiseResult.isCanceled()).toBe(true);
-        expect(innerPromiseResult.get).toThrow(RCPCancelError);
+        expect(innerPromiseResult.get()).toBeNull();
+        expect(innerPromiseResult.getSync).toThrow(RCPCancelError);
     })();
 
     const parentPromiseResult = await RecursiveCancelablePromise.cancel(parentPromise);
     expect(parentPromise.isCanceled()).toBe(true);
     expect(parentPromiseResult.isCanceled()).toBe(true);
-    expect(parentPromiseResult.get).toThrow(RCPCancelError);
+    expect(parentPromiseResult.get()).toBeNull();
+    expect(parentPromiseResult.getSync).toThrow(RCPCancelError);
 });
 
 test('cancelable-promise.wrapper integration subscribe, stop on inner promise has no effect on parent', async () => {
@@ -84,11 +87,13 @@ test('cancelable-promise.wrapper integration subscribe, stop on inner promise ha
         const innerPromiseResult = await innerPromise;
         expect(innerPromise.isCanceled()).toBe(true);
         expect(innerPromiseResult.isCanceled()).toBe(true);
-        expect(innerPromiseResult.get).toThrow(RCPCancelError);
+        expect(innerPromiseResult.get()).toBeNull();
+        expect(innerPromiseResult.getSync).toThrow(RCPCancelError);
     })();
 
     const parentPromiseResult = await parentPromise;
     expect(parentPromise.isCanceled()).toBe(false);
     expect(parentPromiseResult.isCanceled()).toBe(false);
     expect(parentPromiseResult.get()).toBe(expectedValue);
+    expect(parentPromiseResult.getSync()).toBe(expectedValue);
 });
