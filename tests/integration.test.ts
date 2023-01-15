@@ -1,4 +1,4 @@
-import RecursiveCancelablePromise, { RCPCancelError, RCPController } from 'recursive-cancelable-promise';
+import RecursiveCancelablePromise, { RCPCancelError, RCPControllerInterface } from 'recursive-cancelable-promise';
 import { createTestPromiseCatchHandleBuilder, createTestPromiseTryHandleBuilder } from './utils';
 
 const expectedValue = 5;
@@ -6,17 +6,16 @@ const unexpectedValue = 10;
 
 test('ExecutorTry, resolve', async () => {
     const promise = new RecursiveCancelablePromise(
-        async (controller: RCPController): Promise<number> => {
+        async (_controller: RCPControllerInterface): Promise<number> => {
             return expectedValue;
         },
     );
-    expect((await promise).get()).toBe(expectedValue);
-    expect((await promise).getSync()).toBe(expectedValue);
+    expect(await promise).toBe(expectedValue);
 });
 
 test('ExecutorTry, reject', async () => {
     const promise = new RecursiveCancelablePromise(
-        async (controller: RCPController): Promise<number> => {
+        async (_controller: RCPControllerInterface): Promise<number> => {
             throw expectedValue;
         },
     );
@@ -25,23 +24,22 @@ test('ExecutorTry, reject', async () => {
 
 test('ExecutorCatch, resolve', async () => {
     const promise = new RecursiveCancelablePromise(
-        async (controller: RCPController): Promise<number> => {
+        async (_controller: RCPControllerInterface): Promise<number> => {
             throw expectedValue;
         },
-        async (controller: RCPController, error: number): Promise<number> => {
+        async (controller: RCPControllerInterface, error: number): Promise<number> => {
             return error;
         },
     );
-    expect((await promise).get()).toBe(expectedValue);
-    expect((await promise).getSync()).toBe(expectedValue);
+    expect(await promise).toBe(expectedValue);
 });
 
 test('ExecutorCatch, reject', async () => {
     const promise = new RecursiveCancelablePromise(
-        async (controller: RCPController): Promise<number> => {
+        async (_controller: RCPControllerInterface): Promise<number> => {
             throw unexpectedValue;
         },
-        async (controller: RCPController, error: number): Promise<number> => {
+        async (_controller: RCPControllerInterface, _error: number): Promise<number> => {
             throw expectedValue;
         },
     );
@@ -49,7 +47,7 @@ test('ExecutorCatch, reject', async () => {
 });
 
 test('ExecutorCancel with ExecutorTry', async () => {
-    let testObject = { stopCalled: false };
+    const testObject = { stopCalled: false };
     const promise = createTestPromiseTryHandleBuilder(
         expectedValue,
         undefined,
@@ -58,12 +56,12 @@ test('ExecutorCancel with ExecutorTry', async () => {
         },
     )();
 
-    await RecursiveCancelablePromise.cancel(promise);
+    await expect(RecursiveCancelablePromise.cancel(promise)).rejects.toThrow(RCPCancelError);
     await expect(testObject.stopCalled).toBe(true);
 });
 
 test('ExecutorCancel with ExecutorCatch', async () => {
-    let testObject = { stopCalled: false };
+    const testObject = { stopCalled: false };
     const promise = createTestPromiseCatchHandleBuilder(
         expectedValue,
         async (): Promise<void> => {
@@ -74,16 +72,12 @@ test('ExecutorCancel with ExecutorCatch', async () => {
         },
     )();
 
-    await promise;
+    await expect(promise).rejects.toThrow(RCPCancelError);
     await expect(testObject.stopCalled).toBe(true);
 });
 
 async function testStopped<T>(promise: RecursiveCancelablePromise<T>) {
-    const promiseResult = await RecursiveCancelablePromise.cancel(promise);
-    expect(promise.isCanceled()).toBe(true);
-    expect(promiseResult.isCanceled()).toBe(true);
-    expect(promiseResult.get()).toBeNull();
-    expect(promiseResult.getSync).toThrow(RCPCancelError);
+    await expect(RecursiveCancelablePromise.cancel(promise)).rejects.toThrow(RCPCancelError);
 }
 
 test('StopSignal ExecutorTry, stopped', async () => {
@@ -97,72 +91,73 @@ test('StopSignal ExecutorCatch, stopped', async () => {
 });
 
 test('StopSignal ExecutorTry, stop on parent promise has effect on inner', async () => {
-    const parentPromise = createTestPromiseTryHandleBuilder(expectedValue, async (controller: RCPController) => {
+    const parentPromise = createTestPromiseTryHandleBuilder(expectedValue, async (controller: RCPControllerInterface) => {
         const innerPromise = controller.subscribe(createTestPromiseTryHandleBuilder(expectedValue));
-        const innerPromiseResult = await innerPromise;
-
-        expect(innerPromise.isCanceled()).toBe(true);
-        expect(innerPromiseResult.isCanceled()).toBe(true);
-        expect(innerPromiseResult.get()).toBeNull();
-        expect(innerPromiseResult.getSync).toThrow(RCPCancelError);
+        await expect(innerPromise).rejects.toThrow(RCPCancelError);
     })();
 
-    const parentPromiseResult = await RecursiveCancelablePromise.cancel(parentPromise);
-    expect(parentPromise.isCanceled()).toBe(true);
-    expect(parentPromiseResult.isCanceled()).toBe(true);
-    expect(parentPromiseResult.get()).toBeNull();
-    expect(parentPromiseResult.getSync).toThrow(RCPCancelError);
+    await expect(RecursiveCancelablePromise.cancel(parentPromise)).rejects.toThrow(RCPCancelError);
 });
 
 test('StopSignal ExecutorCatch, stop on parent promise has effect on inner', async () => {
-    const parentPromise = createTestPromiseCatchHandleBuilder(expectedValue, async (controller: RCPController) => {
+    const parentPromise = createTestPromiseCatchHandleBuilder(expectedValue, async (controller: RCPControllerInterface) => {
         // cancel after catch handle run
         parentPromise.cancel();
 
         expect(() => controller.subscribe(createTestPromiseCatchHandleBuilder(expectedValue))).toThrow(RCPCancelError);
     })();
 
-    const parentPromiseResult = await parentPromise;
-    expect(parentPromise.isCanceled()).toBe(true);
-    expect(parentPromiseResult.isCanceled()).toBe(true);
-    expect(parentPromiseResult.get()).toBeNull();
-    expect(parentPromiseResult.getSync).toThrow(RCPCancelError);
+    await expect(parentPromise).rejects.toThrow(RCPCancelError);
 });
 
 test('StopSignal ExecutorTry, stop on inner promise has no effect on parent', async () => {
-    const parentPromise = createTestPromiseTryHandleBuilder(expectedValue, async (controller: RCPController) => {
+    const parentPromise = createTestPromiseTryHandleBuilder(expectedValue, async (controller: RCPControllerInterface) => {
         const innerPromise = controller.subscribe(createTestPromiseTryHandleBuilder(expectedValue));
-        await innerPromise.cancel();
-
-        const innerPromiseResult = await innerPromise;
-        expect(innerPromise.isCanceled()).toBe(true);
-        expect(innerPromiseResult.isCanceled()).toBe(true);
-        expect(innerPromiseResult.get()).toBeNull();
-        expect(innerPromiseResult.getSync).toThrow(RCPCancelError);
+        innerPromise.cancel();
+        await expect(innerPromise).rejects.toThrow(RCPCancelError);
     })();
 
-    const parentPromiseResult = await parentPromise;
+    await expect(parentPromise).resolves.toBe(expectedValue);
     expect(parentPromise.isCanceled()).toBe(false);
-    expect(parentPromiseResult.isCanceled()).toBe(false);
-    expect(parentPromiseResult.get()).toBe(expectedValue);
-    expect(parentPromiseResult.getSync()).toBe(expectedValue);
 });
 
 test('StopSignal ExecutorCatch, stop on inner promise has no effect on parent', async () => {
-    const parentPromise = createTestPromiseCatchHandleBuilder(expectedValue, async (controller: RCPController) => {
+    const parentPromise = createTestPromiseCatchHandleBuilder(expectedValue, async (controller: RCPControllerInterface) => {
         const innerPromise = controller.subscribe(createTestPromiseCatchHandleBuilder(expectedValue));
         await innerPromise.cancel();
 
-        const innerPromiseResult = await innerPromise;
+        await expect(innerPromise).rejects.toThrow(RCPCancelError);
         expect(innerPromise.isCanceled()).toBe(true);
-        expect(innerPromiseResult.isCanceled()).toBe(true);
-        expect(innerPromiseResult.get()).toBeNull();
-        expect(innerPromiseResult.getSync).toThrow(RCPCancelError);
     })();
 
-    const parentPromiseResult = await parentPromise;
+    await expect(parentPromise).resolves.toBe(expectedValue);
     expect(parentPromise.isCanceled()).toBe(false);
-    expect(parentPromiseResult.isCanceled()).toBe(false);
-    expect(parentPromiseResult.get()).toBe(expectedValue);
-    expect(parentPromiseResult.getSync()).toBe(expectedValue);
+});
+
+test('Flow stops after internal RCP was canceled', async () => {
+    let isSecondChildRcpCalled = false;
+
+    const parentPromise = new RecursiveCancelablePromise(async (parentController: RCPControllerInterface) => {
+        await parentController.subscribe(() => {
+            return new RecursiveCancelablePromise(
+              async (controller: RCPControllerInterface): Promise<number> => {
+                  return new Promise((resolve) => {
+                      const interval = setInterval(() => {
+                          if (controller.isCanceled()) {
+                              clearInterval(interval);
+                              resolve(0)
+                          }
+                      }, 200);
+                  })
+              },
+            );
+        });
+
+        isSecondChildRcpCalled = true;
+    });
+
+    parentPromise.cancel();
+    await expect(parentPromise).rejects.toThrow(RCPCancelError);
+
+    expect(isSecondChildRcpCalled).toBe(false);
 });
