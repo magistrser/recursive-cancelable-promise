@@ -1,13 +1,13 @@
-import RecursiveCancelablePromise, { RCPController, RCPExecutorCancel } from '../lib';
+import RecursiveCancelablePromise, { RCPControllerInterface, RCPExecutorCancel } from 'recursive-cancelable-promise';
 
 export function createTestPromiseTryHandleBuilder(
     expectedValue: number,
-    doIn?: (controller: RCPController) => Promise<void>,
+    doIn?: (controller: RCPControllerInterface) => Promise<void>,
     executorCancel?: RCPExecutorCancel,
 ): () => RecursiveCancelablePromise<number> {
     return () =>
         new RecursiveCancelablePromise(
-            async (controller: RCPController): Promise<number> => {
+            async (controller: RCPControllerInterface): Promise<number> => {
                 return createRCPExecutor(controller, expectedValue, doIn);
             },
             undefined,
@@ -17,15 +17,15 @@ export function createTestPromiseTryHandleBuilder(
 
 export function createTestPromiseCatchHandleBuilder(
     expectedValue: number,
-    doIn?: (controller: RCPController) => Promise<void>,
+    doIn?: (controller: RCPControllerInterface) => Promise<void>,
     executorCancel?: RCPExecutorCancel,
 ): () => RecursiveCancelablePromise<number> {
     return () =>
         new RecursiveCancelablePromise(
-            async (controller: RCPController): Promise<number> => {
+            async (_controller: RCPControllerInterface): Promise<number> => {
                 throw expectedValue;
             },
-            async (controller: RCPController, error: number): Promise<number> => {
+            async (controller: RCPControllerInterface, error: number): Promise<number> => {
                 if (error !== expectedValue) {
                     throw new Error(`Unexpected error: ${error}`);
                 }
@@ -36,24 +36,28 @@ export function createTestPromiseCatchHandleBuilder(
 }
 
 async function createRCPExecutor(
-    controller: RCPController,
+    controller: RCPControllerInterface,
     expectedValue: number,
-    doIn?: (controller: RCPController) => Promise<void>,
+    doIn?: (controller: RCPControllerInterface) => Promise<void>,
 ): Promise<number> {
     return new Promise<number>(async (resolve, reject) => {
-        doIn && (await doIn(controller));
+        await doIn?.(controller);
 
         let interval: NodeJS.Timer | null = null;
-
         const timer = setTimeout(() => {
-            interval && clearInterval(interval);
+            if (interval) {
+                clearInterval(interval);
+            }
+
             resolve(expectedValue);
         }, 2e3);
 
         interval = setInterval(async () => {
             if (controller.isCanceled()) {
                 clearTimeout(timer);
-                interval && clearInterval(interval);
+                if (interval) {
+                    clearInterval(interval);
+                }
 
                 try {
                     await controller.sync();

@@ -36,11 +36,7 @@ const recursiveCancelablePromise  =
             // subscribe new RecursiveCancelablePromise to parent RecursiveCancelablePromise
             // if parent canceled, child will be canceled too
             // if child canceled, parent will be not canceled
-            // return RecursiveCancelablePromise
-            const rcpResult = await controller.subscribe(() => new RecursiveCancelablePromise(/*...*/));
-        
-            // Return resolved value, or abort execution
-            rcpResult.getSync();
+            await controller.subscribe(() => new RecursiveCancelablePromise(/*...*/));
         },
         // catch handle, not required parameter
         async (controller: RCPController, error): Promise</*type*/> => {
@@ -58,36 +54,6 @@ const recursiveCancelablePromise  =
     );
 ```
 
-**RecursiveCancelablePromiseResult**
-```javascript
-import RecursiveCancelablePromise from 'recursive-cancelable-promise';
-
-const recursiveCancelablePromise = new RecursiveCancelablePromise(/*...*/);
-
-// return true if canceled
-recursiveCancelablePromise.isCanceled();
-
-// Send cancel signal for controller
-recursiveCancelablePromise().cancel();
-
-// wait when recursiveCancelablePromise will be resolved
-let rcpResult = await recursiveCancelablePromise();
-
-// Send cancel signal and wait when recursiveCancelablePromise will be resolved
-rcpResult = await RecursiveCancelablePromise.cancel(recursiveCancelablePromise);
-
-// return true if canceled
-rcpResult.isCanceled();
-
-// Return resolved result, or null if recursiveCancelablePromise was canceled
-rcpResult.get();
-
-// Return resolved result, or rethrow CancelableError(abort execution),
-// if recursiveCancelablePromise was canceled.
-// Helpful in inner recursiveCancelablePromise
-rcpResult.getSync();
-```
-
 **wrapCancelablePromise**
 ```javascript
 import { wrapCancelablePromise } from 'recursive-cancelable-promise';
@@ -98,4 +64,21 @@ const recursiveCancelablePromise = wrapCancelablePromise(
             // do smth
         }),
     );
+```
+
+***RCPCancelError***
+```javascript
+import RecursiveCancelablePromise, { RCPController } from 'recursive-cancelable-promise';
+
+const recursiveCancelablePromise = new RecursiveCancelablePromise(...);
+
+...
+
+try {
+    await recursiveCancelablePromise;
+} catch(error) {
+    if (error instanceof RCPCancelError) {
+        // handle canceled
+    }
+}
 ```

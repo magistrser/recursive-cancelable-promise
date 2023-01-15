@@ -1,13 +1,13 @@
 import { RCPCancelError } from './RecursiveCancelablePromiseCancelError';
 import { CancelablePromise, RCPErrorCallback } from './index';
 
-export interface RCPController {
+export interface RCPControllerInterface {
     isCanceled: () => boolean;
     sync: (doIfCanceled?: () => void) => void;
     subscribe: <T>(promiseCreator: () => CancelablePromise<T>) => CancelablePromise<T>;
 }
 
-export class _RCPController {
+export class RCPController implements RCPControllerInterface {
     private readonly errorCallback?: RCPErrorCallback;
     private isCanceledFlag = false;
     private subscribedCancelablePromises: CancelablePromise<any>[] = [];
@@ -25,7 +25,7 @@ export class _RCPController {
 
     sync = (doIfCanceled?: () => void): void => {
         if (this.isCanceledFlag) {
-            doIfCanceled && doIfCanceled();
+            doIfCanceled?.();
             throw new RCPCancelError();
         }
     };

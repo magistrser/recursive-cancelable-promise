@@ -1,7 +1,7 @@
 import RecursiveCancelablePromise, {
     RCPCancelError,
     wrapCancelablePromise,
-    RCPController,
+    RCPControllerInterface,
 } from 'recursive-cancelable-promise';
 import CancelablePromise from 'cancelable-promise';
 import { createTestPromiseTryHandleBuilder } from './utils';
@@ -15,8 +15,7 @@ test('cancelable-promise.wrapper resolve', async () => {
         }),
     );
 
-    const parentPromiseResult = await promise;
-    expect(parentPromiseResult.get()).toBe(expectedValue);
+    await expect(promise).resolves.toBe(expectedValue);
 });
 
 test('cancelable-promise.wrapper reject', async () => {
@@ -38,15 +37,12 @@ test('cancelable-promise.wrapper stop', async () => {
         }),
     );
 
-    const parentPromiseResult = await RecursiveCancelablePromise.cancel(promise);
+    await expect(RecursiveCancelablePromise.cancel(promise)).rejects.toThrow(RCPCancelError);
     expect(promise.isCanceled()).toBe(true);
-    expect(parentPromiseResult.isCanceled()).toBe(true);
-    expect(parentPromiseResult.get()).toBeNull();
-    expect(parentPromiseResult.getSync).toThrow(RCPCancelError);
 });
 
 test('cancelable-promise.wrapper integration subscribe, stop on parent promise has effect on inner', async () => {
-    const parentPromise = createTestPromiseTryHandleBuilder(expectedValue, async (controller: RCPController) => {
+    const parentPromise = createTestPromiseTryHandleBuilder(expectedValue, async (controller: RCPControllerInterface) => {
         const innerPromise = controller.subscribe(() =>
             wrapCancelablePromise(
                 new CancelablePromise((resolve, reject, onCancel) => {
@@ -56,23 +52,17 @@ test('cancelable-promise.wrapper integration subscribe, stop on parent promise h
                 }),
             ),
         );
-        const innerPromiseResult = await innerPromise;
 
+        await expect(innerPromise).rejects.toThrow(RCPCancelError);
         expect(innerPromise.isCanceled()).toBe(true);
-        expect(innerPromiseResult.isCanceled()).toBe(true);
-        expect(innerPromiseResult.get()).toBeNull();
-        expect(innerPromiseResult.getSync).toThrow(RCPCancelError);
     })();
 
-    const parentPromiseResult = await RecursiveCancelablePromise.cancel(parentPromise);
+    await expect(RecursiveCancelablePromise.cancel(parentPromise)).rejects.toThrow(RCPCancelError);
     expect(parentPromise.isCanceled()).toBe(true);
-    expect(parentPromiseResult.isCanceled()).toBe(true);
-    expect(parentPromiseResult.get()).toBeNull();
-    expect(parentPromiseResult.getSync).toThrow(RCPCancelError);
 });
 
 test('cancelable-promise.wrapper integration subscribe, stop on inner promise has no effect on parent', async () => {
-    const parentPromise = createTestPromiseTryHandleBuilder(expectedValue, async (controller: RCPController) => {
+    const parentPromise = createTestPromiseTryHandleBuilder(expectedValue, async (controller: RCPControllerInterface) => {
         const innerPromise = controller.subscribe(() =>
             wrapCancelablePromise(
                 new CancelablePromise((resolve, reject, onCancel) => {
@@ -82,18 +72,33 @@ test('cancelable-promise.wrapper integration subscribe, stop on inner promise ha
                 }),
             ),
         );
-        await innerPromise.cancel();
 
-        const innerPromiseResult = await innerPromise;
+        innerPromise.cancel()
+        await expect(innerPromise).rejects.toThrow(RCPCancelError)
         expect(innerPromise.isCanceled()).toBe(true);
-        expect(innerPromiseResult.isCanceled()).toBe(true);
-        expect(innerPromiseResult.get()).toBeNull();
-        expect(innerPromiseResult.getSync).toThrow(RCPCancelError);
     })();
 
-    const parentPromiseResult = await parentPromise;
+    await expect(parentPromise).resolves.toBe(expectedValue);
     expect(parentPromise.isCanceled()).toBe(false);
-    expect(parentPromiseResult.isCanceled()).toBe(false);
-    expect(parentPromiseResult.get()).toBe(expectedValue);
-    expect(parentPromiseResult.getSync()).toBe(expectedValue);
+});
+
+test('cancelable-promise.wrapper flow stops after internal RCP was canceled', async () => {
+    let isSecondChildRcpCalled = false;
+
+    const parentPromise = new RecursiveCancelablePromise(async (parentController: RCPControllerInterface) => {
+        await parentController.subscribe(() => wrapCancelablePromise(
+          new CancelablePromise((resolve, reject, onCancel) => {
+              onCancel(() => {
+                  resolve(0);
+              });
+          }),
+        ));
+
+        isSecondChildRcpCalled = true;
+    });
+
+    parentPromise.cancel();
+    await expect(parentPromise).rejects.toThrow(RCPCancelError);
+
+    expect(isSecondChildRcpCalled).toBe(false);
 });
